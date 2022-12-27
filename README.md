@@ -1,4 +1,4 @@
-## Crossword Generator
+## Crossword Maker
 
 Makes a valid crossword from a list of words.    
 
