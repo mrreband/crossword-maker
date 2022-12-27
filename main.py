@@ -9,10 +9,9 @@ def load_file(file_path: str):
 
 
 if __name__ == "__main__":
-    import random
-    random.seed(1011)
+    file_path = "input/grandkids.txt"
 
-    words = load_file("./words.txt")
-    grid = Grid(num_rows=100, num_cols=100, words=words)
+    words = load_file("input/grandkids.txt")
+    grid = Grid(num_rows=100, num_cols=100, words=words, output_file_name="grandkids")
     solutions = grid.solve()
     print(solutions)

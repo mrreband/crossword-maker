@@ -1,6 +1,6 @@
 ## Crossword Maker
 
-Makes a valid crossword from a list of words.    
+Makes valid crosswords from a list of words.    
 
 ---
 

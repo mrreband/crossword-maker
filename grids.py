@@ -90,11 +90,15 @@ class GridWord:
 
 
 class Solution:
-    def __init__(self, solution: List, placed_words: List[GridWord], all_words: List[str], depth: int):
+    def __init__(self, solution: List, placed_words: List[GridWord], all_words: List[str], depth: int,
+                 output_folder: str = "./output"):
         self.solution = solution
         self.placed_words = placed_words
         self.all_words = all_words
         self.depth = depth
+        self.output_folder = output_folder
+
+        os.makedirs(self.output_folder, exist_ok=True)
 
     @property
     def bottom_right(self):
@@ -125,6 +129,10 @@ class Solution:
         return f"{self.width}x{self.height}"
 
     @property
+    def area(self):
+        return self.height * self.width
+
+    @property
     def remaining_words(self):
         placed_words = [w.word for w in self.placed_words]
         return [w for w in self.all_words if w not in placed_words]
@@ -152,15 +160,17 @@ class Solution:
         print('\n'.join([''.join([item for item in row]) for row in self.trimmed]))
 
     def write_solution(self):
-        print(f"solution: missing {self.remaining_words}")
         solution = '\n'.join([''.join([item for item in row]) for row in self.trimmed])
-        print(solution)
-        with open(f"./output/{self.dimensions}-{id(self)}.txt", "w") as file:
+
+        output_file_path = f"{self.output_folder}/{self.area} -- {self.dimensions}-{id(self)}.txt"
+        print(output_file_path)
+
+        with open(output_file_path, "w") as file:
             file.write(solution)
 
 
 class Grid:
-    def __init__(self, num_rows: int, num_cols: int, words: List[str]):
+    def __init__(self, num_rows: int, num_cols: int, words: List[str], output_file_name: str = "words"):
         self.num_rows = num_rows
         self.num_cols = num_cols
 
@@ -173,6 +183,9 @@ class Grid:
 
         # list of GridWord objects
         self.grid_words = []
+
+        # for output directory
+        self.output_folder = f"./output/{output_file_name}"
 
     def __repr__(self):
         return self.solution
@@ -224,9 +237,9 @@ class Grid:
         self.place_grid_word(grid_word=word_to_place, solution=new_solution)
         new_solution.depth += 1
 
-        if len(new_solution.remaining_words) <= 1:
-            print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
-            # new_solution.print_solution()
+        # if len(new_solution.remaining_words) <= 1:
+        #     print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
+        #     # new_solution.print_solution()
 
         if len(new_solution.remaining_words) == 0:
             possible_solutions.append(new_solution)
@@ -241,17 +254,17 @@ class Grid:
         return possible_solutions
 
     def clear_solutions(self):
-        output_folder = "./output"
-        if os.path.exists(output_folder):
+        if os.path.exists(self.output_folder):
             import shutil
-            shutil.rmtree(output_folder)
-        os.makedirs(output_folder)
+            shutil.rmtree(self.output_folder)
+        os.makedirs(self.output_folder)
 
     def solve(self):
         self.clear_solutions()
 
         first_word = self.get_first_word()
-        current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0)
+        current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
+                                    output_folder=self.output_folder)
         solutions = self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])
         return solutions
 
