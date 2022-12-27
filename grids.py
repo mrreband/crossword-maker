@@ -304,9 +304,13 @@ class Grid:
 
         def try_place_grid_word(grid_word: GridWord):
             for letter in grid_word.grid_letters:
-                if solution.solution[letter.column][letter.row] != "-":
-                    would_overwrite = solution.solution[letter.column][letter.row]
-                    if would_overwrite != letter.letter:
+                try:
+                    existing_cell = solution.solution[letter.column][letter.row]
+                except IndexError:
+                    # off the grid
+                    return False
+                if existing_cell != "-":
+                    if existing_cell != letter.letter:
                         return False
             return True
 
