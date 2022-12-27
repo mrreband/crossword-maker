@@ -1,5 +1,6 @@
 import math
 import random
+from copy import deepcopy
 from typing import List
 
 
@@ -47,10 +48,11 @@ class Orientation:
 
 
 class GridWord:
-    def __init__(self, word: str, r: int, c: int, direction: str, intersection: int):
+    def __init__(self, word: str, r: int, c: int, direction: str, intersection_idx: int = None):
         self.word = word
         self.orientation = Orientation(direction=direction)
         self.grid_letters = []
+        self.intersection_idx = intersection_idx
 
         self.placed_on_grid = r is not None and c is not None and direction is not None
         if self.placed_on_grid:
@@ -60,12 +62,18 @@ class GridWord:
                     row=r + idx * self.orientation.multipliers[0],
                     column=c + idx * self.orientation.multipliers[1],
                 )
-                if idx == intersection:
+                if idx == intersection_idx:
                     grid_letter.intersection = True
                 self.grid_letters.append(grid_letter)
 
     def __repr__(self):
         return f"{self.word}, ({self.start_position}) -- ({self.end_position}), {self.direction}"
+
+    @property
+    def intersection(self):
+        if self.intersection_idx:
+            return self.grid_letters[self.intersection_idx]
+        return None
 
     @property
     def direction(self):
@@ -78,6 +86,26 @@ class GridWord:
     @property
     def end_position(self):
         return self.grid_letters[-1].position
+
+
+class Solution:
+    def __init__(self, solution: List, placed_words: List[GridWord], all_words: List[str], depth: int):
+        self.solution = solution
+        self.placed_words = placed_words
+        self.all_words = all_words
+        self.depth = depth
+
+    @property
+    def remaining_words(self):
+        placed_words = [w.word for w in self.placed_words]
+        return [w for w in self.all_words if w not in placed_words]
+
+    @property
+    def transposed(self):
+        return [*zip(*self.solution)]
+
+    def __repr__(self):
+        return f"depth {self.depth}, placed: {len(self.placed_words)}, remaining: {len(self.remaining_words)}"
 
 
 class Grid:
@@ -122,54 +150,60 @@ class Grid:
         center = (math.floor(self.num_rows / 2), math.floor(self.num_cols / 2))
         return center
 
-    def traverse(self, word_to_place: GridWord, other_words: List[str], depth: int, possible_solution):
-        self.place_grid_word(grid_word=word_to_place)
-
-        if len(other_words) == 0:
-            self.possible_solutions.append(possible_solution)
-
-        remaining_words = [w for w in other_words if w != word_to_place.word]
-        other_grid_words = self.find_other_words(word_to_place, other_words)
-        for other_word in other_grid_words:
-            self.traverse(other_word, remaining_words, depth + 1, possible_solution)
-
-    def solve(self):
-        first_word = self.get_first_word()
-        possible_solution = [*self.grid]
-        self.traverse(word_to_place=first_word, other_words=self.words, depth=1, possible_solution=possible_solution)
-        return self.possible_solutions
-
     def get_first_word(self):
         random_idx = random.randint(0, len(self.words))
         random_word = self.words[random_idx]
         center = self.__approximate_center
-        first_word = GridWord(word=random_word, r=center[0], c=center[1], direction="across", intersection=None)
+        first_word = GridWord(word=random_word, r=center[0], c=center[1], direction="across", intersection_idx=None)
         return first_word
 
-    def place_first_word(self):
-        first_word = self.get_first_word()
-        self.place_grid_word(grid_word=first_word)
-        return first_word
-
-    def place_word(self, word: str, r, c, direction, whatif: bool = False):
-        grid_word = GridWord(word=word, r=r, c=c, direction=direction)
-        self.place_grid_word(grid_word=grid_word, whatif=whatif)
-        return grid_word
-
-    def place_grid_word(self, grid_word: GridWord, whatif: bool = False):
+    def place_grid_word(self, grid_word: GridWord, solution: Solution):
         for letter in grid_word.grid_letters:
-            if self.grid[letter.column][letter.row] != "-":
-                if not letter.intersection:
-                    raise ValueError(f"{letter} would overwrite another")
-            self.grid[letter.column][letter.row] = letter.letter
+            if solution.solution[letter.column][letter.row] != "-":
+                would_overwrite = solution.solution[letter.column][letter.row]
+                if would_overwrite != letter.letter:
+                    raise ValueError(f"{letter} would overwrite {would_overwrite}")
+            solution.solution[letter.column][letter.row] = letter.letter
         grid_word.placed_on_grid = True
-        self.grid_words.append(grid_word)
+        solution.placed_words.append(grid_word)
 
-    def __word_fits(self, grid_word: GridWord):
+    @staticmethod
+    def print_solution(solution, missing):
+        print(f"solution: missing {missing}")
+        transposed = [*zip(*solution)]
+        print('\n'.join([''.join([item for item in row]) for row in transposed]))
+
+    def traverse(self, word_to_place: GridWord, current_solution: Solution, possible_solutions: list):
+        print(f"traverse grid, depth {current_solution.depth} - word {word_to_place}")
+
+        new_solution = deepcopy(current_solution)
+        self.place_grid_word(grid_word=word_to_place, solution=new_solution)
+        new_solution.depth += 1
+
+        if len(current_solution.remaining_words) <= 1:
+            self.print_solution(new_solution.solution, new_solution.remaining_words)
+
+        if len(current_solution.remaining_words) == 0:
+            possible_solutions.append(new_solution)
+
+        other_grid_words = self.find_other_words(grid_word=word_to_place, solution=new_solution)
+        for other_word in other_grid_words:
+            self.traverse(word_to_place=other_word, current_solution=new_solution,
+                          possible_solutions=possible_solutions)
+
+        print(f"no solution on this branch, depth {new_solution.depth}, missing {new_solution.remaining_words}")
+
+    def solve(self):
+        first_word = self.get_first_word()
+        current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0)
+        self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])
+        return self.possible_solutions
+
+    def word_fits(self, grid_word: GridWord):
         return grid_word.end_position[0] <= self.num_cols and grid_word.end_position[1] <= self.num_rows
 
-    def __words_are_adjacent(self, grid_word_1: GridWord, grid_word_2: GridWord):
-        if any([gl.intersection for gl in grid_word_2.grid_letters]):
+    def words_are_adjacent(self, grid_word_1: GridWord, grid_word_2: GridWord):
+        if self.words_intersect(grid_word_1=grid_word_1, grid_word_2=grid_word_2):
             return False
 
         if grid_word_1.direction == "across" and grid_word_2.direction == "across":
@@ -193,56 +227,87 @@ class Grid:
 
                 across_row = grid_word_1.grid_letters[0].row
                 across_columns = [gl.column for gl in grid_word_1.grid_letters]
-                if any([abs(down_column - col) == 1 for col in across_columns]):
-                    return True
-                if any([abs(across_row - row) == 1 for row in down_rows]):
-                    return True
-            # elif grid_word_1.direction == "down" and grid_word_2.direction == "across":
-            #     # for perpendicular words, need to check the endpoints
-            #     down_column = grid_word_2.grid_letters[0].column
-            #     down_rows = [gl.row for gl in grid_word_2.grid_letters]
+            elif grid_word_1.direction == "down" and grid_word_2.direction == "across":
+                down_column = grid_word_1.grid_letters[0].column
+                down_rows = [gl.row for gl in grid_word_1.grid_letters]
 
-            #     across_row = grid_word_1.grid_letters[0].row
-            #     across_columns = [gl.column for gl in grid_word_1.grid_letters]
-            #     if any([abs(down_column - col) == 1 for col in across_columns]):
-            #         return True
-            #     if any([abs(across_row - row) == 1 for row in down_rows]):
-            #         return True
+                across_row = grid_word_2.grid_letters[0].row
+                across_columns = [gl.column for gl in grid_word_2.grid_letters]
+            else:
+                raise ValueError(f"unexpected directions: {grid_word_1.direction} vs {grid_word_2.direction}")
+
+            if any([abs(down_column - col) == 1 for col in across_columns]):
+                return True
+            if any([abs(across_row - row) == 1 for row in down_rows]):
+                return True
 
         return False
 
-    def __words_overlap(self, grid_word_1: GridWord, grid_word_2: GridWord):
-        ...
+    def get_intersections(self, grid_word_1: GridWord, grid_word_2: GridWord):
+        positions_1 = set([gl.position for gl in grid_word_1.grid_letters])
+        positions_2 = set([gl.position for gl in grid_word_2.grid_letters])
+        intersections = positions_1.intersection(positions_2)
+        return list(intersections)
 
-    def __words_intersect(self, grid_word_1: GridWord, grid_word_2: GridWord):
-        ...
+    def words_overlap(self, grid_word_1: GridWord, grid_word_2: GridWord):
+        intersections = self.get_intersections(grid_word_1=grid_word_1, grid_word_2=grid_word_2)
+        if len(intersections) > 1:
+            return True
+        else:
+            return False
 
-    def __word_is_valid(self, candidate_grid_word: GridWord):
+    def words_intersect(self, grid_word_1: GridWord, grid_word_2: GridWord):
+        intersections = self.get_intersections(grid_word_1=grid_word_1, grid_word_2=grid_word_2)
+        if len(intersections) == 1:
+            return True
+        else:
+            return False
+
+    def word_is_valid(self, candidate_grid_word: GridWord, solution: Solution):
         # check if it's off the grid
-        word_fits = self.__word_fits(candidate_grid_word)
+        word_fits = self.word_fits(candidate_grid_word)
         if not word_fits:
             return False
 
-        for placed_grid_word in self.grid_words:
-            if self.__words_are_adjacent(placed_grid_word, candidate_grid_word):
+        for placed_grid_word in solution.placed_words:
+            if self.words_overlap(placed_grid_word, candidate_grid_word):
                 return False
-        return True
 
-    def find_other_words(self, grid_word: GridWord, other_words: List[str]):
+            if self.words_are_adjacent(placed_grid_word, candidate_grid_word):
+                return False
+
+            # # check for unexpected intersections
+            # intersections = self.get_intersections(placed_grid_word, candidate_grid_word)
+            # if intersections and candidate_grid_word.intersection:
+            #     if candidate_grid_word.intersection.position != intersections[0]:
+            #         return False
+
+        def try_place_grid_word(grid_word: GridWord):
+            for letter in grid_word.grid_letters:
+                if solution.solution[letter.column][letter.row] != "-":
+                    would_overwrite = solution.solution[letter.column][letter.row]
+                    if would_overwrite != letter.letter:
+                        return False
+            return True
+
+        return try_place_grid_word(grid_word=candidate_grid_word)
+
+    def find_other_words(self, grid_word: GridWord, solution: Solution):
         """
         go thru each letter of this grid_word.  find any other words that have that letter
         and that if placed appropriately on the grid would be valid
 
         :type grid_word: GridWord
-        :type other_words: List[str]
+        :type solution: Solution
         """
+        other_words = solution.remaining_words
         target_orientation = Orientation.orthogonal(grid_word.direction)
 
         other_possible_words = []
         for grid_letter in grid_word.grid_letters:
             letter = grid_letter.letter
 
-            print(f"{grid_word.word} - looking for remaining words with {letter} ({grid_letter.position})")
+            # print(f"    - {grid_word.word} - looking for remaining words with {letter} ({grid_letter.position})")
             others_with_letter = [w for w in other_words if w != grid_word.word and letter in w]
             for other in others_with_letter:
                 intersection_position = str(other).index(letter)
@@ -253,16 +318,17 @@ class Grid:
                 else:
                     other_starting_position[1] -= intersection_position
 
-                print(f"{other} - {letter} found in {intersection_position}")
-                print(f"{other} - starting_position = {other_starting_position}")
+                # print(f"        - {other} - {letter} found in {intersection_position}")
+                # print(f"        - {other} - starting_position = {other_starting_position}")
                 other_possible_word = GridWord(
                     word=other,
                     r=other_starting_position[0],
                     c=other_starting_position[1],
                     direction=target_orientation.direction,
-                    intersection=intersection_position,
+                    intersection_idx=intersection_position,
                 )
-                if self.__word_is_valid(candidate_grid_word=other_possible_word):
+                if self.word_is_valid(candidate_grid_word=other_possible_word, solution=solution):
+                    print(f"    - {grid_word.word} <--> {other_possible_word})")
                     other_possible_words.append(other_possible_word)
 
         return other_possible_words

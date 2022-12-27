@@ -5,12 +5,12 @@ from grids import GridWord, Grid
 
 @pytest.fixture
 def grid_word_hello():
-    return GridWord(word="hello", r=5, c=5, direction="across", intersection=None, adjacent=[])
+    return GridWord(word="hello", r=5, c=5, direction="across", intersection_idx=None)
 
 
 @pytest.fixture
 def grid_word_world():
-    return GridWord(word="world", r=2, c=7, direction="down", intersection=None, adjacent=[])
+    return GridWord(word="world", r=2, c=7, direction="down", intersection_idx=None)
 
 
 @pytest.fixture
