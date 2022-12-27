@@ -225,12 +225,9 @@ class Grid:
         center = (math.floor(self.num_rows / 2), math.floor(self.num_cols / 2))
         return center
 
-    def get_first_word(self):
-        random.seed(1011)
-        random_idx = random.randint(0, len(self.words))
-        random_word = self.words[6]
+    def get_first_word(self, word: str):
         center = self.__approximate_center
-        first_word = GridWord(word=random_word, r=center[0], c=center[1], direction="across", intersection_idx=None)
+        first_word = GridWord(word=word, r=center[0], c=center[1], direction="across", intersection_idx=None)
         return first_word
 
     def place_grid_word(self, grid_word: GridWord, solution: Solution):
@@ -247,17 +244,18 @@ class Grid:
         new_solution = deepcopy(current_solution)
         self.place_grid_word(grid_word=word_to_place, solution=new_solution)
         new_solution.depth += 1
-
-        if len(new_solution.remaining_words) <= 1:
-            print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
-            # new_solution.print_solution()
+        #
+        # if len(new_solution.remaining_words) <= 1:
+        #     print(f"traverse grid, depth {new_solution.depth} - remaining {new_solution.remaining_words}")
+        #     new_solution.print_trimmed()
 
         if len(new_solution.remaining_words) == 0:
-            possible_solutions.append(new_solution)
-            new_solution.write_solution()
-            possible_solutions.append(new_solution)
+            solutions = [s.solution for s in possible_solutions]
+            if new_solution.solution not in solutions:
+                new_solution.write_solution()
+                possible_solutions.append(new_solution)
 
-        other_grid_words = self.find_other_words(grid_word=word_to_place, solution=new_solution)
+        other_grid_words = self.find_other_words(solution=new_solution)
         for other_word in other_grid_words:
             self.traverse(word_to_place=other_word, current_solution=new_solution,
                           possible_solutions=possible_solutions)
@@ -272,11 +270,12 @@ class Grid:
 
     def solve(self):
         self.clear_solutions()
-
-        first_word = self.get_first_word()
-        current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
-                                    output_folder=self.output_folder)
-        solutions = self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])
+        solutions = []
+        for word in self.words:
+            first_word = self.get_first_word(word=word)
+            current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
+                                        output_folder=self.output_folder)
+            solutions.extend(self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[]))
         return solutions
 
     def word_fits(self, grid_word: GridWord):
@@ -376,7 +375,7 @@ class Grid:
 
         return try_place_grid_word(grid_word=candidate_grid_word)
 
-    def find_other_words(self, grid_word: GridWord, solution: Solution):
+    def find_other_words(self, solution: Solution):
         """
         go thru each letter of this grid_word.  find any other words that have that letter
         and that if placed appropriately on the grid would be valid
@@ -385,34 +384,36 @@ class Grid:
         :type solution: Solution
         """
         other_words = solution.remaining_words
-        target_orientation = Orientation.orthogonal(grid_word.direction)
 
         other_possible_words = []
-        for grid_letter in grid_word.grid_letters:
-            letter = grid_letter.letter
+        for grid_word in solution.placed_words:
+            target_orientation = Orientation.orthogonal(grid_word.direction)
 
-            # print(f"    - {grid_word.word} - looking for remaining words with {letter} ({grid_letter.position})")
-            others_with_letter = [w for w in other_words if w != grid_word.word and letter in w]
-            for other in others_with_letter:
-                intersection_position = str(other).index(letter)
-                other_starting_position = [*grid_letter.position]
+            for grid_letter in grid_word.grid_letters:
+                letter = grid_letter.letter
 
-                if target_orientation.direction == "down":
-                    other_starting_position[0] -= intersection_position
-                else:
-                    other_starting_position[1] -= intersection_position
+                # print(f"    - {grid_word.word} - looking for remaining words with {letter} ({grid_letter.position})")
+                others_with_letter = [w for w in other_words if w != grid_word.word and letter in w]
+                for other in others_with_letter:
+                    intersection_position = str(other).index(letter)
+                    other_starting_position = [*grid_letter.position]
 
-                # print(f"        - {other} - {letter} found in {intersection_position}")
-                # print(f"        - {other} - starting_position = {other_starting_position}")
-                other_possible_word = GridWord(
-                    word=other,
-                    r=other_starting_position[0],
-                    c=other_starting_position[1],
-                    direction=target_orientation.direction,
-                    intersection_idx=intersection_position,
-                )
-                if self.word_is_valid(candidate_grid_word=other_possible_word, solution=solution):
-                    # print(f"    - {grid_word.word} <--> {other_possible_word})")
-                    other_possible_words.append(other_possible_word)
+                    if target_orientation.direction == "down":
+                        other_starting_position[0] -= intersection_position
+                    else:
+                        other_starting_position[1] -= intersection_position
+
+                    # print(f"        - {other} - {letter} found in {intersection_position}")
+                    # print(f"        - {other} - starting_position = {other_starting_position}")
+                    other_possible_word = GridWord(
+                        word=other,
+                        r=other_starting_position[0],
+                        c=other_starting_position[1],
+                        direction=target_orientation.direction,
+                        intersection_idx=intersection_position,
+                    )
+                    if self.word_is_valid(candidate_grid_word=other_possible_word, solution=solution):
+                        # print(f"    - {grid_word.word} <--> {other_possible_word})")
+                        other_possible_words.append(other_possible_word)
 
         return other_possible_words
