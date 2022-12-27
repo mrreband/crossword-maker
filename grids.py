@@ -114,11 +114,11 @@ class Solution:
 
     @property
     def width(self):
-        return self.bottom_right[0] - self.top_left[0]
+        return self.bottom_right[0] - self.top_left[0] + 1
 
     @property
     def height(self):
-        return self.bottom_right[1] - self.top_left[1]
+        return self.bottom_right[1] - self.top_left[1] + 1
 
     @property
     def dimensions(self):
@@ -131,9 +131,9 @@ class Solution:
 
     @property
     def trimmed(self):
-        trimmed_solution = [["-"] * (self.width + 1) for i in range(self.height + 1)]
-        for i in range(self.height + 1):
-            for j in range(self.width + 1):
+        trimmed_solution = [["-"] * (self.width) for i in range(self.height)]
+        for i in range(self.height):
+            for j in range(self.width):
                 try:
                     trimmed_solution[i][j] = self.solution[self.top_left[1] + i][self.top_left[0] + j]
                 except Exception as ex:
