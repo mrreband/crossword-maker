@@ -1,4 +1,5 @@
 import math
+import os
 import random
 from copy import deepcopy
 from typing import List
@@ -96,12 +97,32 @@ class Solution:
         self.depth = depth
 
     @property
-    def edges(self):
+    def bottom_right(self):
+        end_rows = [gw.end_position[0] for gw in self.placed_words]
+        end_cols = [gw.end_position[1] for gw in self.placed_words]
+        max_end_row = max(end_rows)
+        max_end_col = max(end_cols)
+        return max_end_row, max_end_col
+
+    @property
+    def top_left(self):
         start_rows = [gw.start_position[0] for gw in self.placed_words]
         start_cols = [gw.start_position[1] for gw in self.placed_words]
         min_start_row = min(start_rows)
         min_start_col = min(start_cols)
         return min_start_row, min_start_col
+
+    @property
+    def width(self):
+        return self.bottom_right[0] - self.top_left[0]
+
+    @property
+    def height(self):
+        return self.bottom_right[1] - self.top_left[1]
+
+    @property
+    def dimensions(self):
+        return f"{self.width}x{self.height}"
 
     @property
     def remaining_words(self):
@@ -110,8 +131,13 @@ class Solution:
 
     @property
     def trimmed(self):
-        trimmed_solution = [*self.solution]
-        trimmed_solution = [row for row in trimmed_solution if not all([col == "-" for col in row])]
+        trimmed_solution = [["-"] * (self.width + 1) for i in range(self.height + 1)]
+        for i in range(self.height + 1):
+            for j in range(self.width + 1):
+                try:
+                    trimmed_solution[i][j] = self.solution[self.top_left[1] + i][self.top_left[0] + j]
+                except Exception as ex:
+                    print(ex)
         return [*zip(*trimmed_solution)]
 
     @property
@@ -119,17 +145,17 @@ class Solution:
         return [*zip(*self.solution)]
 
     def __repr__(self):
-        return f"depth {self.depth}, placed: {len(self.placed_words)}, remaining: {len(self.remaining_words)}"
+        return f"depth {self.depth}, dimensions: {self.dimensions}, placed: {len(self.placed_words)}, remaining: {len(self.remaining_words)}"
 
     def print_trimmed(self):
         print(f"solution: missing {self.remaining_words}")
         print('\n'.join([''.join([item for item in row]) for row in self.trimmed]))
 
-    def print_solution(self):
+    def write_solution(self):
         print(f"solution: missing {self.remaining_words}")
-        solution = '\n'.join([''.join([item for item in row]) for row in self.transposed])
+        solution = '\n'.join([''.join([item for item in row]) for row in self.trimmed])
         print(solution)
-        with open(f"./output/{id(self)}", "w") as file:
+        with open(f"./output/{self.dimensions}-{id(self)}.txt", "w") as file:
             file.write(solution)
 
 
@@ -203,7 +229,7 @@ class Grid:
 
         if len(new_solution.remaining_words) == 0:
             possible_solutions.append(new_solution)
-            new_solution.print_solution()
+            new_solution.write_solution()
             return new_solution
 
         other_grid_words = self.find_other_words(grid_word=word_to_place, solution=new_solution)
@@ -213,7 +239,16 @@ class Grid:
 
         # print(f"no solution on this branch, depth {new_solution.depth}, missing {new_solution.remaining_words}")
 
+    def clear_solutions(self):
+        output_folder = "./output"
+        if os.path.exists(output_folder):
+            import shutil
+            shutil.rmtree(output_folder)
+        os.makedirs(output_folder)
+
     def solve(self):
+        self.clear_solutions()
+
         first_word = self.get_first_word()
         current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0)
         solutions = self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])

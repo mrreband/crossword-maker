@@ -1,7 +1,7 @@
 import random
 
 import file_ops
-from grids import Grid, GridWord
+from grids import Grid
 
 
 if __name__ == "__main__":
