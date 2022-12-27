@@ -5,6 +5,7 @@ def load_file(file_path: str):
     with open(file_path) as file:
         words = file.readlines()
         words = [w.upper().strip() for w in words]
+        words = [w for w in words if w != ""]
         return words
 
 
