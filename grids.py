@@ -202,6 +202,7 @@ class Grid:
         return center
 
     def get_first_word(self):
+        random.seed(1011)
         random_idx = random.randint(0, len(self.words))
         random_word = self.words[random_idx]
         center = self.__approximate_center
@@ -223,21 +224,21 @@ class Grid:
         self.place_grid_word(grid_word=word_to_place, solution=new_solution)
         new_solution.depth += 1
 
-        if len(new_solution.remaining_words) <= 2:
-            print(f"traverse grid, depth {current_solution.depth} - word {word_to_place}")
+        if len(new_solution.remaining_words) <= 1:
+            print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
             # new_solution.print_solution()
 
         if len(new_solution.remaining_words) == 0:
             possible_solutions.append(new_solution)
             new_solution.write_solution()
-            return new_solution
+            possible_solutions.append(new_solution)
 
         other_grid_words = self.find_other_words(grid_word=word_to_place, solution=new_solution)
         for other_word in other_grid_words:
             self.traverse(word_to_place=other_word, current_solution=new_solution,
                           possible_solutions=possible_solutions)
 
-        # print(f"no solution on this branch, depth {new_solution.depth}, missing {new_solution.remaining_words}")
+        return possible_solutions
 
     def clear_solutions(self):
         output_folder = "./output"
