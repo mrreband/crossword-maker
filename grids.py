@@ -96,9 +96,23 @@ class Solution:
         self.depth = depth
 
     @property
+    def edges(self):
+        start_rows = [gw.start_position[0] for gw in self.placed_words]
+        start_cols = [gw.start_position[1] for gw in self.placed_words]
+        min_start_row = min(start_rows)
+        min_start_col = min(start_cols)
+        return min_start_row, min_start_col
+
+    @property
     def remaining_words(self):
         placed_words = [w.word for w in self.placed_words]
         return [w for w in self.all_words if w not in placed_words]
+
+    @property
+    def trimmed(self):
+        trimmed_solution = [*self.solution]
+        trimmed_solution = [row for row in trimmed_solution if not all([col == "-" for col in row])]
+        return [*zip(*trimmed_solution)]
 
     @property
     def transposed(self):
@@ -106,6 +120,17 @@ class Solution:
 
     def __repr__(self):
         return f"depth {self.depth}, placed: {len(self.placed_words)}, remaining: {len(self.remaining_words)}"
+
+    def print_trimmed(self):
+        print(f"solution: missing {self.remaining_words}")
+        print('\n'.join([''.join([item for item in row]) for row in self.trimmed]))
+
+    def print_solution(self):
+        print(f"solution: missing {self.remaining_words}")
+        solution = '\n'.join([''.join([item for item in row]) for row in self.transposed])
+        print(solution)
+        with open(f"./output/{id(self)}", "w") as file:
+            file.write(solution)
 
 
 class Grid:
@@ -167,37 +192,32 @@ class Grid:
         grid_word.placed_on_grid = True
         solution.placed_words.append(grid_word)
 
-    @staticmethod
-    def print_solution(solution, missing):
-        print(f"solution: missing {missing}")
-        transposed = [*zip(*solution)]
-        print('\n'.join([''.join([item for item in row]) for row in transposed]))
-
     def traverse(self, word_to_place: GridWord, current_solution: Solution, possible_solutions: list):
-        print(f"traverse grid, depth {current_solution.depth} - word {word_to_place}")
-
         new_solution = deepcopy(current_solution)
         self.place_grid_word(grid_word=word_to_place, solution=new_solution)
         new_solution.depth += 1
 
-        if len(current_solution.remaining_words) <= 1:
-            self.print_solution(new_solution.solution, new_solution.remaining_words)
+        if len(new_solution.remaining_words) <= 2:
+            print(f"traverse grid, depth {current_solution.depth} - word {word_to_place}")
+            # new_solution.print_solution()
 
-        if len(current_solution.remaining_words) == 0:
+        if len(new_solution.remaining_words) == 0:
             possible_solutions.append(new_solution)
+            new_solution.print_solution()
+            return new_solution
 
         other_grid_words = self.find_other_words(grid_word=word_to_place, solution=new_solution)
         for other_word in other_grid_words:
             self.traverse(word_to_place=other_word, current_solution=new_solution,
                           possible_solutions=possible_solutions)
 
-        print(f"no solution on this branch, depth {new_solution.depth}, missing {new_solution.remaining_words}")
+        # print(f"no solution on this branch, depth {new_solution.depth}, missing {new_solution.remaining_words}")
 
     def solve(self):
         first_word = self.get_first_word()
         current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0)
-        self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])
-        return self.possible_solutions
+        solutions = self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[])
+        return solutions
 
     def word_fits(self, grid_word: GridWord):
         return grid_word.end_position[0] <= self.num_cols and grid_word.end_position[1] <= self.num_rows
@@ -328,7 +348,7 @@ class Grid:
                     intersection_idx=intersection_position,
                 )
                 if self.word_is_valid(candidate_grid_word=other_possible_word, solution=solution):
-                    print(f"    - {grid_word.word} <--> {other_possible_word})")
+                    # print(f"    - {grid_word.word} <--> {other_possible_word})")
                     other_possible_words.append(other_possible_word)
 
         return other_possible_words
