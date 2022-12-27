@@ -1,18 +1,9 @@
 from grids import Grid
 
 
-def load_file(file_path: str):
-    with open(file_path) as file:
-        words = file.readlines()
-        words = [w.upper().strip() for w in words]
-        words = [w for w in words if w != ""]
-        return words
-
-
 if __name__ == "__main__":
-    file_path = "input/grandkids.txt"
+    input_file_path = "input/children.txt"
 
-    words = load_file("input/grandkids.txt")
-    grid = Grid(num_rows=100, num_cols=100, words=words, output_file_name="grandkids")
+    grid = Grid(num_rows=100, num_cols=100, input_file_path=input_file_path)
     solutions = grid.solve()
     print(solutions)

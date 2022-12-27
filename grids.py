@@ -1,6 +1,8 @@
 import math
+import ntpath
 import os
 import random
+
 from copy import deepcopy
 from typing import List
 
@@ -170,7 +172,14 @@ class Solution:
 
 
 class Grid:
-    def __init__(self, num_rows: int, num_cols: int, words: List[str], output_file_name: str = "words"):
+    def __init__(self, num_rows: int, num_cols: int, input_file_path: str = "./input/words.txt"):
+        def load_file(file_path: str):
+            with open(file_path) as file:
+                words = file.readlines()
+                words = [w.upper().strip() for w in words]
+                words = [w for w in words if w != ""]
+                return words
+
         self.num_rows = num_rows
         self.num_cols = num_cols
 
@@ -179,13 +188,15 @@ class Grid:
         self.possible_solutions = []
 
         # list of words (string)
-        self.words = words
+        self.words = load_file(input_file_path)
+        self.input_file_path = input_file_path
+        self.file_name = ntpath.basename(input_file_path)
+
+        # for output directory
+        self.output_folder = f"./output/{self.file_name.rstrip('.txt')}"
 
         # list of GridWord objects
         self.grid_words = []
-
-        # for output directory
-        self.output_folder = f"./output/{output_file_name}"
 
     def __repr__(self):
         return self.solution
@@ -217,7 +228,7 @@ class Grid:
     def get_first_word(self):
         random.seed(1011)
         random_idx = random.randint(0, len(self.words))
-        random_word = self.words[random_idx]
+        random_word = self.words[6]
         center = self.__approximate_center
         first_word = GridWord(word=random_word, r=center[0], c=center[1], direction="across", intersection_idx=None)
         return first_word
@@ -237,9 +248,9 @@ class Grid:
         self.place_grid_word(grid_word=word_to_place, solution=new_solution)
         new_solution.depth += 1
 
-        # if len(new_solution.remaining_words) <= 1:
-        #     print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
-        #     # new_solution.print_solution()
+        if len(new_solution.remaining_words) <= 1:
+            print(f"traverse grid, depth {new_solution.depth} - remaining {len(new_solution.remaining_words)}")
+            # new_solution.print_solution()
 
         if len(new_solution.remaining_words) == 0:
             possible_solutions.append(new_solution)
