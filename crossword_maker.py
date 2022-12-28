@@ -1,7 +1,6 @@
 import math
 import ntpath
 import os
-import random
 
 from copy import deepcopy
 from typing import List
@@ -186,9 +185,6 @@ class Grid:
         # for output directory
         self.output_folder = f"./output/{self.file_name.rstrip('.txt')}"
 
-        # list of GridWord objects
-        self.grid_words = []
-
     def __repr__(self):
         return self.solution
 
@@ -199,17 +195,6 @@ class Grid:
     @property
     def solution(self):
         return '\n'.join([''.join([item for item in row]) for row in self.transposed])
-
-    def get_grid_word(self, word: str):
-        return next(iter([gw for gw in self.grid_words if gw.word == word]))
-
-    @property
-    def placed_words(self) -> List[str]:
-        return [gw.word for gw in self.grid_words if gw.placed_on_grid]
-
-    @property
-    def remaining_words(self) -> List[str]:
-        return [w for w in self.words if w not in self.placed_words]
 
     @property
     def __approximate_center(self):

@@ -6,6 +6,20 @@ I found a few similar attempts out there (like [this](https://github.com/riverru
 
 ---
 
+### Structure: 
+
+All code is in `crossword_maker.py`
+
+class structure: 
+
+- Grid
+  - Solution
+    - GridWord
+      - GridLetter
+      - Orientation
+
+---
+
 ### Usage: 
 
 1. add words to a text file in `./input`, one per line
