@@ -1,4 +1,4 @@
-from crossword_maker import Grid, GridWord
+from crossword_maker import Grid
 
 
 if __name__ == "__main__":
@@ -6,9 +6,6 @@ if __name__ == "__main__":
 
     grid = Grid(num_rows=100, num_cols=100, input_file_path=input_file_path)
 
-    # load_solution(grid=grid)
-
     solutions = grid.solve()
     print(solutions)
-
 
