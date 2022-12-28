@@ -12,14 +12,13 @@ class GridLetter:
         self.letter = letter
         self.row = row
         self.column = column
-        self.intersection = ""
 
     @property
     def position(self):
         return self.row, self.column
 
     def __repr__(self):
-        return f"{self.letter} - ({self.position}) {'*' if self.intersection else ''}"
+        return f"{self.letter} - ({self.position})"
 
 
 class Orientation:
@@ -51,11 +50,10 @@ class Orientation:
 
 
 class GridWord:
-    def __init__(self, word: str, r: int, c: int, direction: str, intersection_idx: int = None):
+    def __init__(self, word: str, r: int, c: int, direction: str):
         self.word = word
         self.orientation = Orientation(direction=direction)
         self.grid_letters = []
-        self.intersection_idx = intersection_idx
 
         self.placed_on_grid = r is not None and c is not None and direction is not None
         if self.placed_on_grid:
@@ -65,18 +63,11 @@ class GridWord:
                     row=r + idx * self.orientation.multipliers[0],
                     column=c + idx * self.orientation.multipliers[1],
                 )
-                if idx == intersection_idx:
-                    grid_letter.intersection = True
                 self.grid_letters.append(grid_letter)
 
     def __repr__(self):
-        return f"{self.word}, ({self.start_position}) -- ({self.end_position}), {self.direction}"
-
-    @property
-    def intersection(self):
-        if self.intersection_idx:
-            return self.grid_letters[self.intersection_idx]
-        return None
+        r, c = self.start_position
+        return f"GridWord(word='{self.word}', r={r}, c={c}, direction='{self.direction}')"
 
     @property
     def direction(self):
@@ -227,7 +218,7 @@ class Grid:
 
     def get_first_word(self, word: str):
         center = self.__approximate_center
-        first_word = GridWord(word=word, r=center[0], c=center[1], direction="across", intersection_idx=None)
+        first_word = GridWord(word=word, r=center[0], c=center[1], direction="across")
         return first_word
 
     def place_grid_word(self, grid_word: GridWord, solution: Solution):
@@ -242,9 +233,10 @@ class Grid:
 
     def traverse(self, word_to_place: GridWord, current_solution: Solution, possible_solutions: list):
         new_solution = deepcopy(current_solution)
-        self.place_grid_word(grid_word=word_to_place, solution=new_solution)
-        new_solution.depth += 1
-        #
+        if word_to_place:
+            self.place_grid_word(grid_word=word_to_place, solution=new_solution)
+            new_solution.depth += 1
+
         # if len(new_solution.remaining_words) <= 1:
         #     print(f"traverse grid, depth {new_solution.depth} - remaining {new_solution.remaining_words}")
         #     new_solution.print_trimmed()
@@ -268,15 +260,31 @@ class Grid:
             shutil.rmtree(self.output_folder)
         os.makedirs(self.output_folder)
 
-    def solve(self):
+    def solve(self, partial_solution: Solution = None):
         self.clear_solutions()
         solutions = []
-        for word in self.words:
-            first_word = self.get_first_word(word=word)
-            current_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
-                                        output_folder=self.output_folder)
-            solutions.extend(self.traverse(word_to_place=first_word, current_solution=current_solution, possible_solutions=[]))
+
+        if partial_solution is None:
+            for word in self.words:
+                first_word = self.get_first_word(word=word)
+                partial_solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
+                                            output_folder=self.output_folder)
+                solutions.extend(
+                    self.traverse(word_to_place=first_word, current_solution=partial_solution, possible_solutions=[]))
+        else:
+            self.traverse(word_to_place=None, current_solution=partial_solution, possible_solutions=[])
+
         return solutions
+
+    def load_solution(self, grid_words: List[GridWord]):
+        solution = Solution(solution=[*self.grid], placed_words=[], all_words=[*self.words], depth=0,
+                            output_folder=self.output_folder)
+        for grid_word in grid_words:
+            if self.word_is_valid(candidate_grid_word=grid_word, solution=solution):
+                self.place_grid_word(grid_word=grid_word, solution=solution)
+            else:
+                raise ValueError(f"invalid solution")
+        return solution
 
     def word_fits(self, grid_word: GridWord):
         return grid_word.end_position[0] <= self.num_cols and grid_word.end_position[1] <= self.num_rows
@@ -285,40 +293,12 @@ class Grid:
         if self.words_intersect(grid_word_1=grid_word_1, grid_word_2=grid_word_2):
             return False
 
-        if grid_word_1.direction == "across" and grid_word_2.direction == "across":
-            # for parallel words, need to check each letter
-            for grid_letter_1 in grid_word_1.grid_letters:
-                for grid_letter_2 in grid_word_2.grid_letters:
-                    if grid_letter_1.column == grid_letter_2.column:
-                        if abs(grid_letter_1.row - grid_letter_2.row) == 1:
-                            return True
-        elif grid_word_1.direction == "down" and grid_word_2.direction == "down":
-            for grid_letter_1 in grid_word_1.grid_letters:
-                for grid_letter_2 in grid_word_2.grid_letters:
-                    if grid_letter_1.row == grid_letter_2.row:
-                        if abs(grid_letter_1.column - grid_letter_2.column) == 1:
-                            return True
-        else:
-            if grid_word_1.direction == "across" and grid_word_2.direction == "down":
-                # for perpendicular words, need to check the endpoints
-                down_column = grid_word_2.grid_letters[0].column
-                down_rows = [gl.row for gl in grid_word_2.grid_letters]
-
-                across_row = grid_word_1.grid_letters[0].row
-                across_columns = [gl.column for gl in grid_word_1.grid_letters]
-            elif grid_word_1.direction == "down" and grid_word_2.direction == "across":
-                down_column = grid_word_1.grid_letters[0].column
-                down_rows = [gl.row for gl in grid_word_1.grid_letters]
-
-                across_row = grid_word_2.grid_letters[0].row
-                across_columns = [gl.column for gl in grid_word_2.grid_letters]
-            else:
-                raise ValueError(f"unexpected directions: {grid_word_1.direction} vs {grid_word_2.direction}")
-
-            if any([abs(down_column - col) == 1 for col in across_columns]):
-                return True
-            if any([abs(across_row - row) == 1 for row in down_rows]):
-                return True
+        for grid_letter_1 in grid_word_1.grid_letters:
+            for grid_letter_2 in grid_word_2.grid_letters:
+                if grid_letter_1.row == grid_letter_2.row and abs(grid_letter_1.column - grid_letter_2.column) == 1:
+                    return True
+                if grid_letter_1.column == grid_letter_2.column and abs(grid_letter_1.row - grid_letter_2.row) == 1:
+                    return True
 
         return False
 
@@ -355,11 +335,9 @@ class Grid:
             if self.words_are_adjacent(placed_grid_word, candidate_grid_word):
                 return False
 
-            # # check for unexpected intersections
-            # intersections = self.get_intersections(placed_grid_word, candidate_grid_word)
-            # if intersections and candidate_grid_word.intersection:
-            #     if candidate_grid_word.intersection.position != intersections[0]:
-            #         return False
+            if placed_grid_word.direction == candidate_grid_word.direction:
+                if self.words_intersect(placed_grid_word, candidate_grid_word):
+                    return False
 
         def try_place_grid_word(grid_word: GridWord):
             for letter in grid_word.grid_letters:
@@ -380,7 +358,6 @@ class Grid:
         go thru each letter of this grid_word.  find any other words that have that letter
         and that if placed appropriately on the grid would be valid
 
-        :type grid_word: GridWord
         :type solution: Solution
         """
         other_words = solution.remaining_words
@@ -410,7 +387,6 @@ class Grid:
                         r=other_starting_position[0],
                         c=other_starting_position[1],
                         direction=target_orientation.direction,
-                        intersection_idx=intersection_position,
                     )
                     if self.word_is_valid(candidate_grid_word=other_possible_word, solution=solution):
                         # print(f"    - {grid_word.word} <--> {other_possible_word})")
