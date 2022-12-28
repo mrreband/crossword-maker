@@ -35,8 +35,8 @@ def test_grid_word(grid_word_hello, grid_word_world):
 
 def test_grid(grid, solution, grid_word_hello, grid_word_world):
     grid.place_grid_word(grid_word_hello, solution=solution)
-    print(grid)
-    # grid.place_grid_word(grid_word_world)
+    grid.place_grid_word(grid_word_world, solution=solution)
+    solution.print_trimmed()
 
 
 if __name__ == "__main__":
