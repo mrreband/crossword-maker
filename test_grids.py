@@ -1,6 +1,6 @@
 import pytest
 
-from grids import GridWord, Grid, Solution
+from crossword_maker import GridWord, Grid, Solution
 
 
 @pytest.fixture
@@ -37,6 +37,19 @@ def test_grid(grid, solution, grid_word_hello, grid_word_world):
     grid.place_grid_word(grid_word_hello, solution=solution)
     grid.place_grid_word(grid_word_world, solution=solution)
     solution.print_trimmed()
+
+
+def test_adjacent(grid: Grid):
+    """
+    make sure parallel words can't be touching
+    """
+    grid_words = [
+        GridWord(word="HELLO", r=0, c=0, direction="across"),
+        GridWord(word="WORLD", r=0, c=5, direction="across"),
+    ]
+    with pytest.raises(ValueError):
+        partial_solution = grid.load_solution(grid_words=grid_words)
+        partial_solution.print_trimmed()
 
 
 if __name__ == "__main__":
