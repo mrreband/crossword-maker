@@ -123,7 +123,7 @@ class Solution:
 
     @property
     def area(self):
-        return self.height * self.width
+        return f"00{self.height * self.width}"[-3:]
 
     @property
     def remaining_words(self):
