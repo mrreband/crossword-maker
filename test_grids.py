@@ -1,21 +1,28 @@
 import pytest
 
-from grids import GridWord, Grid
+from grids import GridWord, Grid, Solution
 
 
 @pytest.fixture
 def grid_word_hello():
-    return GridWord(word="hello", r=5, c=5, direction="across", intersection_idx=None)
+    return GridWord(word="hello", r=5, c=5, direction="across")
 
 
 @pytest.fixture
 def grid_word_world():
-    return GridWord(word="world", r=2, c=7, direction="down", intersection_idx=None)
+    return GridWord(word="world", r=2, c=7, direction="down")
 
 
 @pytest.fixture
 def grid():
-    return Grid(num_rows=20, num_cols=20, words=["hello", "world"])
+    words_path = "./input/words.txt"
+    return Grid(num_rows=20, num_cols=20, input_file_path=words_path)
+
+
+@pytest.fixture
+def solution(grid):
+    return Solution(solution=[*grid.grid], placed_words=[], all_words=[*grid.words], depth=0,
+                    output_folder=grid.output_folder)
 
 
 def test_grid_word(grid_word_hello, grid_word_world):
@@ -26,8 +33,8 @@ def test_grid_word(grid_word_hello, grid_word_world):
     assert all([gl.column == w.column for gl in grid_word_world.grid_letters])
 
 
-def test_grid(grid, grid_word_hello, grid_word_world):
-    grid.place_grid_word(grid_word_hello)
+def test_grid(grid, solution, grid_word_hello, grid_word_world):
+    grid.place_grid_word(grid_word_hello, solution=solution)
     print(grid)
     # grid.place_grid_word(grid_word_world)
 
