@@ -1,14 +1,14 @@
 ## Crossword Maker
 
-Makes valid crosswords from a list of words.  Uses python with no dependencies.       
+Makes valid crosswords from a list of words.  Uses python with no dependencies (except pytest).
 
-I found a few similar attempts out there (like [this](https://github.com/riverrun/genxword) and [this](https://pypi.org/project/pycrossword/) and [this](https://codereview.stackexchange.com/questions/231222/python-3-code-to-generate-simple-crossword-puzzles-from-a-list-of-words-anagrams)) - each of them had issues either with the logic or with package dependencies 
+I tried a few existing projects first (like [this](https://github.com/riverrun/genxword) and [this](https://pypi.org/project/pycrossword/) and [this](https://codereview.stackexchange.com/questions/231222/python-3-code-to-generate-simple-crossword-puzzles-from-a-list-of-words-anagrams)) - each of them had issues either with the logic or with package dependencies 
 
 ---
 
 ### Structure: 
 
-All code is in `crossword_maker.py`
+`crossword_maker.py`: 
 
 class structure: 
 
